@@ -1,143 +1,80 @@
 # The Lobby
 
-> A neutral, authenticated meeting place where two AI agents — acting on behalf of two different humans — can find each other, prove who they are, negotiate a task, and execute tools against one another with an audit trail.
+> **Pattern 2 of 2.** This repo sketches the *authenticated, sandboxed* version of agent-to-agent meeting coordination. The *public, manual* version lives in [Meet-Me](https://github.com/danielrosehill/Meet-Me). They're two halves of the same idea — these are notes, not a spec.
 
-This repo is a **technical design sketch**, not running code. The goal is to pin down what "two agents actually meet" should mean once you take identity, authorization, and accountability seriously.
+## The picture
 
-The motivating example is calendar coordination (see the sister repo [Meet-Me](https://github.com/danielrosehill/Meet-Me)) but the protocol is task-agnostic.
+Joe sends Jane an email. The signature ends with a single link:
 
----
+> 🤖 **Book a meeting (agent only):** `https://lobby.example/s/9c4f...e2a1`
 
-## Why this needs to exist
+The link is **pre-authenticated, single-use, and ephemeral.** When Jane's agent clicks it:
 
-Today, "agent-to-agent" interaction is point-to-point: one principal stands up an MCP server (or A2A endpoint), and the other principal's agent connects directly. That works for known counterparties. It breaks down for the cold-start case — *Jane's agent has never spoken to Joe's agent before, and neither principal wants to manually exchange OAuth credentials to make a 30-minute meeting happen.*
+1. The link drops the agent into a sandboxed session inside The Lobby.
+2. The session has Joe's pre-issued grants attached — *read availability for the next 30 days, write exactly one booking, expires in 1 hour.*
+3. Jane's agent presents its own delegated credential (signed by Jane, scoped to the same task).
+4. The two agents transact inside the sandbox: read availability, propose a slot, confirm a booking.
+5. The session closes. Both principals' agents walk away with a signed receipt.
 
-The missing piece is a **trusted venue**: somewhere an agent can show up, present a verifiable credential ("I am acting for Jane Doe, scoped to `meeting.propose`, expires in 1 hour"), discover the counterparty's published skill, run the interaction, and walk away with a signed transcript both principals can audit.
+Crucially, the agent **never gets long-lived credentials** to Joe's calendar. The sandbox holds the keys; the sandbox executes the booking; the agents only see what the sandbox is willing to show them.
 
-This is the Keybase / Okta layer for agent-to-agent trust, with a meeting room bolted on the side.
+The intent flow from the recipient's side is dead simple: *agent reads email → spots the link → recognises the pattern → authenticates → books → reports back to its human.*
 
----
+## Why this is the natural complement to `agents.md`
 
-## What The Lobby is (and isn't)
+`agents.md` (Pattern 1) is great at telling another agent *what to do*. It's bad at:
 
-**Is:**
+- proving the agent on the other end is who it claims to be,
+- authorising the actual write action,
+- keeping any of this off the public internet,
+- producing an audit trail.
 
-- An identity broker: signs short-lived agent credentials that prove "this agent is acting for this principal, with these scopes, until this time."
-- A discovery surface: resolves `principal@domain` → published skill manifest (an evolution of `agents.md` / A2A agent cards).
-- A relay for sessions: brokers the connection, optionally proxies the wire protocol, records a signed transcript.
-- Protocol-pluggable: agents speak MCP or A2A over the relay; The Lobby doesn't reinvent tool invocation.
+The Lobby fills exactly those gaps. The signature still has a link in it — but that link is a capability, not a public document.
 
-**Is not:**
+## What The Lobby actually is
 
-- A replacement for MCP or A2A. It sits *above* them, providing identity + discovery + audit.
-- A general agent-hosting platform. Agents run wherever their principal runs them; The Lobby just gives them a place to meet.
-- A model provider. Model-agnostic by construction.
+A neutral, hosted **sandbox runtime** for short-lived agent-to-agent sessions. Concretely it provides:
 
----
+- **Pre-authenticated session links.** A principal mints a link tied to a specific skill, specific scopes, an expiry, and (optionally) a target audience. The link encodes a capability; possession of it is the first half of authorisation.
+- **An ephemeral session sandbox.** When the link is opened, The Lobby provisions an isolated runtime — fresh state, scoped tools, no access to anything the principal didn't explicitly grant. Think Stripe Checkout or a Firecracker-style microVM, but for an agent conversation.
+- **Scoped tool execution.** The sandbox exposes only the tools needed for the task (`read_availability`, `propose_slot`, `confirm_booking`). It speaks MCP or A2A on the wire so existing agent runtimes can talk to it.
+- **Signed transcripts.** Every tool call inside the session is hashed into a chain. At session close, both principals get a signed receipt: who showed up, what they agreed to, when.
 
-## Core concepts
+## What it isn't
 
-### Principal
+- Not a replacement for MCP or A2A. The Lobby uses them as the wire protocol.
+- Not a model provider or agent host. Agents run wherever their principal runs them.
+- Not a public directory of agents. The interaction surface is per-session, capability-gated.
 
-A human (or organization) who delegates authority to an agent. Identified by a domain-bound identifier, e.g. `joe@joesoap.com`. Domain ownership is the root of trust — proven via DNS TXT record, well-known endpoint, or an existing IdP federation.
+## The hard parts (open questions)
 
-### Agent
+This is a work-in-progress idea, not a finished design. The genuinely unresolved bits:
 
-A piece of software acting on behalf of exactly one principal at a time. An agent is **not** an identity; it's a delegated actor. The same Claude/GPT/local model can act for different principals in different sessions.
+- **What's the sandbox runtime?** Something like this almost certainly already exists adjacent — sandboxed code execution (E2B, Modal, Cloudflare Workers / Durable Objects, Fly Machines), browser sandbox agents (Browserbase, Steel), or session-scoped capability runtimes. Most likely the right move is to compose what's already there rather than build a new sandbox primitive. **Looking for prior art** — if this is already a product, please tell me.
+- **Key custody for principals.** Most humans won't manage signing keys. Probably hosted-but-recoverable, passkey-anchored.
+- **Domain proof at scale.** DNS TXT works for technical users; consumer adoption needs IdP federation (Google / Microsoft / Apple sign the principal claim).
+- **Replay and confused-deputy attacks.** Capability links must be audience-bound and one-shot; sandboxes must be nonced; The Lobby is itself a juicy MITM target.
+- **Liability for what the agent agreed to.** The signed receipt is the artifact that resolves disputes — needs legal review, not just crypto.
+- **Spam, griefing, link harvesting.** A pre-authenticated link in an email signature is still a URL someone could exfiltrate. Single-use + audience-bound + short expiry caps the damage, but the threat model needs proper work.
 
-### Skill manifest
+## Who would actually use this
 
-The successor to `agents.md`. A signed JSON document at `https://<domain>/.well-known/agent-manifest.json` listing:
+The pain point is mundane and universal: scheduling ping-pong, Calendly link emails, group bookings that take fifteen messages, "let me check with my team" threads that stall for days. None of this needs a new social network or a model breakthrough — it just needs a place where two agents can meet, prove identity, do one bounded thing, and leave.
 
-- principal identity + key fingerprint
-- skills (named tasks the principal accepts)
-- per-skill protocol endpoint (MCP server URL, A2A endpoint, etc.)
-- per-skill required scopes and rate limits
-- routing rules (delegate to other principals for certain skills)
+If agents reading email on their humans' behalf become common — which feels likely — then the dual-track signature pattern (one link for humans, one capability link for agents) becomes a natural idiom.
 
-### Delegated credential
+## What's in this repo
 
-Short-lived (default ≤1h), JWT-format, signed by the principal's key. Carries:
-
-- principal DID
-- agent fingerprint (which agent instance is allowed to use this)
-- scopes (`meeting.propose`, `meeting.book`)
-- audience (the counterparty principal)
-- expiry, jti
-- optional: max budget, max calls, allowed tools
-
-The Lobby never holds these long-term. It mints session credentials on demand from a principal-signed delegation token.
-
-### Session
-
-A bounded interaction between two agents. Has: session ID, both delegated credentials, agreed protocol (MCP or A2A), transcript hash chain, outcome receipt. Both principals get a signed receipt at the end.
-
----
-
-## Trust model
-
-```
-        Principal A (Joe)                   Principal B (Jane)
-             │                                     │
-     signs delegation                       signs delegation
-             │                                     │
-             ▼                                     ▼
-        Agent A  ──────►   The Lobby   ◄──────  Agent B
-                              │
-                       verifies both delegations
-                       resolves skill manifests
-                       opens session, relays calls
-                       signs transcript hashes
-                              │
-                              ▼
-                    Signed session receipt
-                    (both principals + Lobby)
-```
-
-The Lobby is **trusted for liveness and audit, not for authorization.** It cannot mint a credential on a principal's behalf. The worst a malicious Lobby can do is refuse to relay or lie about session existence — it cannot impersonate a principal because it doesn't hold principal keys.
-
-A future version can drop The Lobby from the path entirely once both agents have each other's manifests and credentials, using the Lobby only as a discovery + audit beacon.
-
----
-
-## Wire flow (calendar example)
-
-1. **Jane asks her agent:** "Book 30 min with Joe Soap next week."
-2. **Jane's agent → The Lobby:** `resolve(joe@joesoap.com, skill=meeting-coordination)`. Lobby fetches and verifies `joesoap.com/.well-known/agent-manifest.json`, returns endpoint + required scopes.
-3. **Jane's agent → Jane:** "Joe's agent needs scopes `meeting.propose`, `meeting.book` for up to 1h. Approve?" Jane approves; her local key signs a delegation token.
-4. **Jane's agent → The Lobby:** `open_session(target=joe@joesoap.com, delegation=<JWT>)`.
-5. **The Lobby → Joe's agent:** session offer. Joe's agent presents its own delegation (pre-issued by Joe — Joe doesn't need to be online).
-6. **Both agents speak MCP** (or A2A) through the relay. Tool calls and responses are hashed into a Merkle chain.
-7. **On `confirm_booking`**, both agents emit a session-end intent. The Lobby produces a signed receipt: `{session_id, participants, transcript_root, outcome, timestamp}`. Both principals' agents store it.
-8. **Either principal can later** present the receipt to dispute or audit what their agent agreed to.
-
----
-
-## Why this is hard (the real engineering)
-
-- **Key custody for principals.** Most humans won't manage signing keys. Need a story: passkey-backed wallet, hosted-but-encrypted, IdP-issued. Probably hosted with hardware-backed keys + recovery, like 1Password for agent identity.
-- **Domain proof at scale.** DNS TXT works for technical users; consumer adoption needs IdP federation (Google/Microsoft/Apple sign the principal claim).
-- **Replay and confused-deputy attacks.** Delegation tokens must be audience-bound. Sessions must be nonce'd. The Lobby is a tempting MITM target.
-- **Liability for agreed actions.** If Joe's agent books a meeting Joe later denies, the signed receipt is the artifact that resolves it. This needs to actually hold up — legal review, not just crypto.
-- **Spam and griefing.** A public lobby invites spammy agents. Reputation, rate limits, principal-side deny lists, and proof-of-stake (literal or social) all need answers.
-- **Protocol drift.** MCP and A2A are both moving targets. The Lobby has to stay version-tolerant without becoming a translation layer for every dialect.
-
----
-
-## Repo layout
-
-| Path | Contents |
+| File | What it is |
 |---|---|
-| [`README.md`](./README.md) | This document — overall design rationale and trust model |
-| [`wireframe.html`](./wireframe.html) | Email-signature pattern: dual-track "Book Meeting · 🤖 Agent · 👤 Human" |
+| [`README.md`](./README.md) | This document — the idea and the open questions. |
+| [`wireframe.html`](./wireframe.html) | The dual-track signature wireframe: `Book Meeting · 🤖 Agent · 👤 Human`. |
 
-More detailed specs (manifest schema, delegation token format, session protocol, threat model) to follow as the design firms up.
-
----
+Specs (manifest schema, capability-link format, session protocol, threat model) will follow if/when the design firms up.
 
 ## Status
 
-Design sketch. No running code. Open to issues, pull requests, and "this already exists, it's called X" corrections — particularly interested in how this overlaps with [A2A](https://github.com/google/A2A), [MCP](https://modelcontextprotocol.io), [NANDA](https://nanda.media.mit.edu/), and DID/Verifiable Credentials work.
+Notes. An open loop. I haven't done a full prior-art sweep — there's likely overlap with [A2A](https://github.com/google/A2A), [MCP](https://modelcontextprotocol.io), [NANDA](https://nanda.media.mit.edu/), DID/Verifiable Credentials, and any number of existing sandbox runtimes. If you're working on something close, I'd love to know.
 
 ## License
 
