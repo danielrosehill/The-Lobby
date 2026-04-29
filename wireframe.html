@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>The Lobby — dual-track signature wireframe</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f4f4f6;
+    margin: 0;
+    padding: 40px 20px;
+    color: #222;
+  }
+  .page { max-width: 720px; margin: 0 auto; }
+  h1 {
+    font-size: 20px; color: #555; font-weight: 500; margin-bottom: 8px;
+  }
+  .caption { color: #888; font-size: 13px; margin-bottom: 24px; }
+
+  .email {
+    background: #fff;
+    border: 1px solid #e1e1e6;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    padding: 24px 28px;
+  }
+  .email-meta {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    font-size: 13px; color: #555;
+  }
+  .email-meta div { margin: 2px 0; }
+  .email-body { font-size: 14px; line-height: 1.55; color: #333; }
+  .email-body p { margin: 0 0 12px; }
+
+  .sig {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+    font-size: 13px; line-height: 1.45; color: #333;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .sig .name { font-weight: 600; font-size: 15px; color: #1a1a1a; }
+  .sig .title { color: #555; }
+  .sig .contact { color: #555; margin-top: 4px; }
+  .sig .contact a { color: #1a73e8; text-decoration: none; }
+
+  /* Dual-track booking row */
+  .book-row {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid #d4dbe5;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 12.5px;
+    background: #fafbfd;
+  }
+  .book-label {
+    padding: 8px 12px;
+    background: #eef2f8;
+    color: #333;
+    font-weight: 600;
+    border-right: 1px solid #d4dbe5;
+    display: flex; align-items: center;
+  }
+  .book-track {
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 6px;
+    text-decoration: none;
+    color: #1a73e8;
+    border-right: 1px solid #d4dbe5;
+    transition: background 0.12s;
+  }
+  .book-track:last-child { border-right: 0; }
+  .book-track:hover { background: #eef5ff; }
+  .book-track .icon {
+    font-size: 15px;
+    line-height: 1;
+  }
+  .book-track .label {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  .book-track .endpoint {
+    color: #888;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  .legend {
+    margin-top: 32px;
+    background: #fff;
+    border: 1px dashed #ccc;
+    border-radius: 6px;
+    padding: 16px 18px;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.5;
+  }
+  .legend h2 {
+    font-size: 14px;
+    margin: 0 0 8px;
+    color: #1a1a1a;
+  }
+  .legend code {
+    background: #f4f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  .legend table {
+    border-collapse: collapse;
+    margin-top: 10px;
+    width: 100%;
+    font-size: 12.5px;
+  }
+  .legend th, .legend td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+  .legend th { color: #666; font-weight: 600; }
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    background: #eef2f8;
+    color: #334;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <h1>The Lobby — dual-track signature pattern</h1>
+    <div class="caption">
+      Same signature, two doors. One for the human, one for the agent. Both lead to the same calendar — but the agent door speaks a protocol.
+    </div>
+
+    <div class="email">
+      <div class="email-meta">
+        <div><strong>From:</strong> Joe Soap &lt;joe@joesoap.com&gt;</div>
+        <div><strong>To:</strong> jane@example.com</div>
+        <div><strong>Subject:</strong> Re: catching up next week</div>
+      </div>
+
+      <div class="email-body">
+        <p>Hi Jane,</p>
+        <p>Sounds good — happy to find a time to chat. Pick whichever route is easier; my agent will negotiate with yours if you'd rather not click.</p>
+        <p>Best,<br>Joe</p>
+
+        <div class="sig">
+          <div class="name">Joe Soap</div>
+          <div class="title">Director of Something Important · Acme Co.</div>
+          <div class="contact">
+            joe@joesoap.com · +1 555 0142 ·
+            <a href="https://joesoap.com">joesoap.com</a>
+          </div>
+
+          <div class="book-row">
+            <div class="book-label">Book&nbsp;Meeting</div>
+            <a class="book-track" href="https://lobby.dev/joe@joesoap.com/meeting-coordination">
+              <span class="icon">&#129302;</span>
+              <span class="label">Agent</span>
+              <span class="endpoint">lobby://joe@joesoap.com</span>
+            </a>
+            <a class="book-track" href="https://cal.joesoap.com/intro">
+              <span class="icon">&#128100;</span>
+              <span class="label">Human</span>
+              <span class="endpoint">cal.joesoap.com</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <h2>What's going on here</h2>
+      <p>The signature offers two equivalent entry points to the same booking flow:</p>
+      <table>
+        <tr><th>Track</th><th>Who clicks</th><th>What happens</th></tr>
+        <tr>
+          <td><span class="pill">&#129302; Agent</span></td>
+          <td>The recipient's AI agent (or a power user who delegated to one)</td>
+          <td>Resolves <code>joe@joesoap.com</code> via The Lobby, fetches the signed skill manifest, opens an authenticated session, books over MCP / A2A. Both principals get a signed receipt.</td>
+        </tr>
+        <tr>
+          <td><span class="pill">&#128100; Human</span></td>
+          <td>The recipient themselves</td>
+          <td>Standard scheduling page. Same calendar, no protocol involved.</td>
+        </tr>
+      </table>
+      <p style="margin-top:12px;">
+        The two tracks are intentionally <strong>peers</strong>, not "primary" + "fallback." This signals to the recipient that delegating to an agent is a first-class option, and gives mail clients / agent runtimes a stable visual idiom to recognise: <em>"this sender publishes an agent endpoint."</em>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
