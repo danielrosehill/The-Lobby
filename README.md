@@ -1,5 +1,8 @@
 # The Lobby
 
+[![Part 1 — Meet-Me](https://img.shields.io/badge/Part_1-Meet--Me-555?style=for-the-badge)](https://github.com/danielrosehill/Meet-Me)
+[![Part 2 — The Lobby](https://img.shields.io/badge/Part_2-The_Lobby-1a73e8?style=for-the-badge)](https://github.com/danielrosehill/The-Lobby)
+
 ![V2 workflow: authenticated link in signature → ephemeral sandbox → scoped MCP tools on calendar → signed receipt](./diagrams/01-v2-workflow-overview.webp)
 
 Pattern 2 of 2. Authenticated, sandboxed agent-to-agent meeting coordination. Pattern 1 (public manifest) is in [Meet-Me](https://github.com/danielrosehill/Meet-Me).
